@@ -7,7 +7,7 @@ use hal::delay::DelayNs;
 //use embedded_hal::blocking::i2c::Write;
 use hal::i2c::I2c;
 
-use embedded_hal as hal;
+use embedded_hal_async as hal;
 
 #[cfg(feature = "charlie_bonnet")]
 pub struct CharlieBonnet;
