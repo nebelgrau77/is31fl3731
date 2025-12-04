@@ -119,9 +119,9 @@ where
 
     pub fn pixel_rgb(&mut self, x: u8, y: u8, r: u8, g: u8, b: u8) -> Result<(), Error<I2cError>> {
         let x = (4 * (3 - x)) + y;
-        self.device.pixel(x, 0, r)?;
-        self.device.pixel(x, 1, g)?;
-        self.device.pixel(x, 2, b)?;
+        self.device.pixel(x, 0, r).await?;
+        self.device.pixel(x, 1, g).await?;
+        self.device.pixel(x, 2, b).await?;
         Ok(())
     }
 }
@@ -218,9 +218,9 @@ where
         }
     }
     pub fn pixel_rgb(&mut self, x: u8, r: u8, g: u8, b: u8) -> Result<(), Error<I2cError>> {
-        self.device.pixel(x, 0, r)?;
-        self.device.pixel(x, 1, g)?;
-        self.device.pixel(x, 2, b)?;
+        self.device.pixel(x, 0, r).await?;
+        self.device.pixel(x, 1, g).await?;
+        self.device.pixel(x, 2, b).await?;
         Ok(())
     }
 }
@@ -289,9 +289,9 @@ where
 
     pub fn pixel_rgb(&mut self, x: u8, y: u8, r: u8, g: u8, b: u8) -> Result<(), Error<I2cError>> {
         let x = x + y * 5;
-        self.device.pixel(x, 0, r)?;
-        self.device.pixel(x, 1, g)?;
-        self.device.pixel(x, 2, b)?;
+        self.device.pixel(x, 0, r).await?;
+        self.device.pixel(x, 1, g).await?;
+        self.device.pixel(x, 2, b).await?;
         Ok(())
     }
 }
@@ -380,9 +380,9 @@ where
 
     pub fn pixel_rgb(&mut self, x: u8, y: u8, r: u8, g: u8, b: u8) -> Result<(), Error<I2cError>> {    
         let x = x + y * 5;
-        self.device.pixel(x, 0, r)?;
-        self.device.pixel(x, 1, g)?;
-        self.device.pixel(x, 2, b)?;
+        self.device.pixel(x, 0, r).await?;
+        self.device.pixel(x, 1, g).await?;
+        self.device.pixel(x, 2, b).await?;
         Ok(())
     }
 }
