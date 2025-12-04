@@ -4,10 +4,7 @@
 /// Preconfigured devices
 pub mod devices;
 
-//use embedded_hal::blocking::delay::DelayMs;
-//use embedded_hal::blocking::i2c::Write;
-
-use embedded_hal as hal;
+use embedded_hal_async as hal;
 use hal::i2c::I2c;
 use hal::delay::DelayNs;
 
@@ -38,17 +35,17 @@ where
     /// frame is the frame in which the fill should be applied to. Please consult the "General
     /// Description" section on the first page of the [data sheet](https://www.lumissil.com/assets/pdf/core/IS31FL3731_DS.pdf)
     /// for more information on frames.
-    pub fn fill(&mut self, brightness: u8, blink: Option<bool>, frame: u8) -> Result<(), I2cError> {
-        self.bank(frame)?;
+    pub async fn fill(&mut self, brightness: u8, blink: Option<bool>, frame: u8) -> Result<(), I2cError> {
+        self.bank(frame).await?;
         let mut payload = [brightness; 25];
         for row in 0..6 {
             payload[0] = addresses::COLOR_OFFSET + row * 24;
-            self.i2c.write(self.address, &payload)?;
+            self.i2c.write(self.address, &payload).await?;
         }
         if blink.is_some() {
             let data = if blink.unwrap() { 1 } else { 0 } * 0xFF;
             for col in 0..18 {
-                self.write_register(frame, addresses::BLINK_OFFSET + col, data)?;
+                self.write_register(frame, addresses::BLINK_OFFSET + col, data).await?;
             }
         }
         Ok(())
@@ -64,26 +61,26 @@ where
     /// 3. Audio syncing will be turned off.
     /// 4. The chip will be told that it's being turned back on.
     //pub fn setup<DEL: DelayMs<u8>>(&mut self, delay: &mut DEL) -> Result<(), Error<I2cError>> {
-    pub fn setup<DEL: DelayNs>(&mut self, delay: &mut DEL) -> Result<(), Error<I2cError>> {
-        self.sleep(true)?;
+    pub async fn setup<DEL: DelayNs>(&mut self, delay: &mut DEL) -> Result<(), Error<I2cError>> {
+        self.sleep(true).await?;
         delay.delay_ms(10);
-        self.mode(addresses::PICTURE_MODE)?;
-        self.frame(0)?;
+        self.mode(addresses::PICTURE_MODE).await?;
+        self.frame(0).await?;
         for frame in 0..8 {
             self.fill(0, Some(false), frame)?;
             for col in 0..18 {
-                self.write_register(frame, addresses::ENABLE_OFFSET + col, 0xFF)?;
+                self.write_register(frame, addresses::ENABLE_OFFSET + col, 0xFF).await?;
             }
         }
-        self.audio_sync(false)?;
-        self.sleep(false)?;
+        self.audio_sync(false).await?;
+        self.sleep(false).await?;
         Ok(())
     }
 
     /// Set the brightness at a specific x,y coordinate. Just like the [fill method](Self::fill)
     /// the brightness should range from 0 to 255. If the coordinate is out of range then the
     /// function will return an error of [InvalidLocation](Error::InvalidLocation).
-    pub fn pixel(&mut self, x: u8, y: u8, brightness: u8) -> Result<(), Error<I2cError>> {
+    pub async fn pixel(&mut self, x: u8, y: u8, brightness: u8) -> Result<(), Error<I2cError>> {
         if x > self.width {
             return Err(Error::InvalidLocation(x));
         }
@@ -91,25 +88,25 @@ where
             return Err(Error::InvalidLocation(y));
         }
         let pixel = (self.calc_pixel)(x, y);
-        self.write_register(self.frame, addresses::COLOR_OFFSET + pixel, brightness)?;
+        self.write_register(self.frame, addresses::COLOR_OFFSET + pixel, brightness).await?;
         Ok(())
     }
 
     /// Change the slave address to a new 7-bit address. Should be configured before calling
     /// [setup](Self::setup) method.
-    pub fn set_address(&mut self, address: u8) {
+    pub async fn set_address(&mut self, address: u8) {
         self.address = address;
     }
 
     /// Set frame ranging from 0 to 8. Please consult the "General Description" section on the
     /// first page of the [data sheet](https://www.lumissil.com/assets/pdf/core/IS31FL3731_DS.pdf)
     /// for more information on frames.
-    pub fn frame(&mut self, frame: u8) -> Result<(), Error<I2cError>> {
+    pub async fn frame(&mut self, frame: u8) -> Result<(), Error<I2cError>> {
         if frame > 8 {
             return Err(Error::InvalidLocation(frame));
         }
         self.frame = frame;
-        self.write_register(addresses::CONFIG_BANK, addresses::FRAME, frame)?;
+        self.write_register(addresses::CONFIG_BANK, addresses::FRAME, frame).await?;
         Ok(())
     }
 
@@ -117,63 +114,63 @@ where
     /// provide which allows for the process to sleep for a certain amount of time (in this case 10
     /// MS to perform a reset).
     //pub fn reset<DEL: DelayMs<u8>>(&mut self, delay: &mut DEL) -> Result<(), I2cError> {
-    pub fn reset<DEL: DelayNs>(&mut self, delay: &mut DEL) -> Result<(), I2cError> {
-        self.sleep(true)?;
+    pub async fn reset<DEL: DelayNs>(&mut self, delay: &mut DEL) -> Result<(), I2cError> {
+        self.sleep(true).await?;
         delay.delay_ms(10);
-        self.sleep(false)?;
+        self.sleep(false).await?;
         Ok(())
     }
 
     /// Set the device mode. Please consult page 17 and 18 of the [data sheet](https://www.lumissil.com/assets/pdf/core/IS31FL3731_DS.pdf)
     /// to learn mode about the different modes.
-    pub fn mode(&mut self, mode: u8) -> Result<(), I2cError> {
-        self.write_register(addresses::CONFIG_BANK, addresses::MODE_REGISTER, mode)?;
+    pub async fn mode(&mut self, mode: u8) -> Result<(), I2cError> {
+        self.write_register(addresses::CONFIG_BANK, addresses::MODE_REGISTER, mode).await?;
         Ok(())
     }
 
     /// Set the slave device to sync audio
-    pub fn audio_sync(&mut self, yes: bool) -> Result<(), I2cError> {
+    pub async fn audio_sync(&mut self, yes: bool) -> Result<(), I2cError> {
         self.write_register(
             addresses::CONFIG_BANK,
             addresses::AUDIOSYNC,
             if yes { 1 } else { 0 },
-        )?;
+        ).await?;
         Ok(())
     }
 
     /// Set the device to sleep
-    pub fn sleep(&mut self, yes: bool) -> Result<(), I2cError> {
+    pub async fn sleep(&mut self, yes: bool) -> Result<(), I2cError> {
         self.write_register(
             addresses::CONFIG_BANK,
             addresses::SHUTDOWN,
             if yes { 0 } else { 1 },
-        )?;
+        ).await?;
         Ok(())
     }
 
     /// Fill the display with a pattern of different brightness values, where the brightness should range from 0 to 255. 
     /// Blink is not being set.
-    pub fn fill_pattern(&mut self, pattern: &[[u8; 24];6], brightness: u8, frame: u8) -> Result<(), I2cError> {
-        self.bank(frame)?;
+    pub async fn fill_pattern(&mut self, pattern: &[[u8; 24];6], brightness: u8, frame: u8) -> Result<(), I2cError> {
+        self.bank(frame).await?;
         let mut payload = [brightness; 25];
         for row in 0..6 {
             payload[0] = addresses::COLOR_OFFSET + row * 24;
             payload[1..].copy_from_slice(&pattern[row as usize]);
-            self.i2c.write(self.address, &payload)?;
+            self.i2c.write(self.address, &payload).await?;
         }
         Ok(())
     }
 
 
-    fn write_register(&mut self, bank: u8, register: u8, value: u8) -> Result<(), I2cError> {
-        self.bank(bank)?;
-        self.i2c.write(self.address, &[register, value])?;
+    async fn write_register(&mut self, bank: u8, register: u8, value: u8) -> Result<(), I2cError> {
+        self.bank(bank).await?;
+        self.i2c.write(self.address, &[register, value]).await?;
         Ok(())
     }
 
-    fn bank(&mut self, bank: u8) -> Result<(), I2cError> {
+    async fn bank(&mut self, bank: u8) -> Result<(), I2cError> {
         self.i2c
-            .write(self.address, &[addresses::BANK_ADDRESS, bank])?;
+            .write(self.address, &[addresses::BANK_ADDRESS, bank]).await?;
         Ok(())
     }
 
