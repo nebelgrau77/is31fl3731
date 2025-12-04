@@ -63,11 +63,11 @@ where
     //pub fn setup<DEL: DelayMs<u8>>(&mut self, delay: &mut DEL) -> Result<(), Error<I2cError>> {
     pub async fn setup<DEL: DelayNs>(&mut self, delay: &mut DEL) -> Result<(), Error<I2cError>> {
         self.sleep(true).await?;
-        delay.delay_ms(10);
+        delay.delay_ms(10).await;
         self.mode(addresses::PICTURE_MODE).await?;
         self.frame(0).await?;
         for frame in 0..8 {
-            self.fill(0, Some(false), frame)?;
+            self.fill(0, Some(false), frame).await?;
             for col in 0..18 {
                 self.write_register(frame, addresses::ENABLE_OFFSET + col, 0xFF).await?;
             }
@@ -116,7 +116,7 @@ where
     //pub fn reset<DEL: DelayMs<u8>>(&mut self, delay: &mut DEL) -> Result<(), I2cError> {
     pub async fn reset<DEL: DelayNs>(&mut self, delay: &mut DEL) -> Result<(), I2cError> {
         self.sleep(true).await?;
-        delay.delay_ms(10);
+        delay.delay_ms(10).await;
         self.sleep(false).await?;
         Ok(())
     }
